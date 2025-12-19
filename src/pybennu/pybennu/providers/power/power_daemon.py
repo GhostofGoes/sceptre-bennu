@@ -253,6 +253,25 @@ class ServerDaemon(Daemon):
                 self.solver = RTDS(server_endpoint, publish_endpoint, settings)
 
             #########################################
+            ############ Genaric Python #############
+            #########################################
+            elif solver == 'GenericPython':
+                try:
+                    E.Endpoint_str_set(server_endpoint,
+                        config.get('power-solver-service',
+                                   'server-endpoint').strip())
+                    E.Endpoint_str_set(publish_endpoint,
+                        config.get('power-solver-service',
+                                   'publish-endpoint').strip())
+                    python_sim = config.get('power-solver-service', 'simulation-file').strip()
+                except NoOptionError:
+                    print("\nERROR: The following must be defined in the configuration file: 'server-endpoint', 'publish-endpoint', and 'simulation-file'\n")
+                    sys.exit(-1)
+                
+                from pybennu.providers.power.solvers.generic_python.generic_python import GenericPython
+                self.solver = GenericPython(server_endpoint, publish_endpoint, python_sim, debug
+                                                                                                                            )
+            #########################################
             ################# Siren #################
             #########################################
             elif solver == "Siren":
