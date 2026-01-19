@@ -4,7 +4,7 @@ class Simulation(BaseSimulation):
     """Simulation class for demonstration purposes."""
     
     def __init__(self):
-        dt = 1
+        dt = 1.0
         super().__init__(dt)
 
         # In the simulator, inputs are inputs to the simulation (outputs from a fd) and vice versa

@@ -15,11 +15,12 @@ import argparse
 import importlib
 from configparser import ConfigParser
 from pybennu.distributed.provider import Provider
+from pybennu.providers.power.solvers.generic_python.base_simulation import BaseSimulation
 
 class GenericPython(Provider):
     """A genearic python implementation of a discrete event simulation."""
 
-    def __init__(self, server_endpoint, publish_endpoint, python_sim, debug=False):
+    def __init__(self, server_endpoint: str, publish_endpoint: str, python_sim: str, debug: bool = False) -> None:
         Provider.__init__(self, server_endpoint, publish_endpoint)
         self.__lock = threading.Lock()
 
@@ -35,7 +36,7 @@ class GenericPython(Provider):
 
         self.create()
 
-    def load_simulation(self, simulation_script):
+    def load_simulation(self, simulation_script: str) -> BaseSimulation:
         """Load the specific sumulation that you want to run. Must inherit from BaseSimulation"""
         spec = importlib.util.spec_from_file_location('simulation', simulation_script)
         simulation_dir = os.path.dirname(simulation_script)
@@ -51,7 +52,7 @@ class GenericPython(Provider):
 
         return module.Simulation()  # Assuming the simulation class is named Simulation
 
-    def create(self):
+    def create(self) -> None:
         """Initialize and start the simulation thread
         Note outputs from the sim are input to the field device and inputs to the sim are outputs from the field device"""
         
@@ -59,9 +60,8 @@ class GenericPython(Provider):
         self.simulation_thread.start()
         self._check_sim_tag_format()
         self._update_elements()
-        return
     
-    def query(self):
+    def query(self) -> str:
         """Implements the query command interface for receiving the
         available system tags when requested by field devices or probes.
         When a query command is received, all available points of the 
@@ -79,10 +79,10 @@ class GenericPython(Provider):
                     for tag in self.elements[io][tag_type]:
                         # Add tag to list of tags
                         tags += f'{tag},'
-        msg = 'ACK={}'.format(tags)
+        msg = f'ACK={tags}'
         return msg
 
-    def read(self, tag):
+    def read(self, tag: str) -> str:
         """Implements the read command interface for receiving the Py
         model when commanded by field devices or probes. When a read command
         is received, the internal representation of the specific element of
@@ -101,12 +101,12 @@ class GenericPython(Provider):
                             value = self.elements[io][tag_type][tag]
             # Return the tag and value pair
             reply = tag + ':' +str(value).lower()
-            msg = 'ACK={}'.format(reply) if str(value) else 'ERR={}'.format("No data found.")
+            msg = f'ACK={reply}' if str(value) else 'ERR=No data found.'
         except Exception as err:
-            msg = 'ERR={}'.format(err)
+            msg = f'ERR={err}'
         return msg
 
-    def write(self, tags):
+    def write(self, tags: dict) -> str:
         """Implements the write command interface for updating the simulation
         when commanded by field devices or probes. When a write command
         is received, the internal representation of the system under test will
@@ -119,8 +119,7 @@ class GenericPython(Provider):
             msg = ''
             for tag, value in tags.items():
                 if self.debug:
-                    print('Python.write ---- received write command for: '
-                        + tag + ' with value ' + value + ' -> ', end='')
+                    print(f'Python.write ---- received write command for: {tag} with value {value}  ->' , end='')
                 val = None
                 # Use only 'outputs_from_fd' since we can only write to simulation inputs
                 # Iterate through both 'analog' and 'binary'
@@ -139,7 +138,7 @@ class GenericPython(Provider):
                             elif value in ['1', '0']:
                                 val = True if value == '1' else False
                             else:
-                                return 'ERR=Invalid value for tag: {}'.format(tag)
+                                return f'ERR=Invalid value for tag: {tag}'
                         elif tag_type == 'analog':
                             val = float(value)
                         break
@@ -156,14 +155,14 @@ class GenericPython(Provider):
                             # If tag wasn't found, it might be because tags in simulation were not formatted
                             tag = tag.split('.')[0]
                             self.simulation.set_parameter(tag, 'input', tag_type, val)
-            msg += 'ACK=Success processing Python write command'
+            msg = 'ACK=Success processing Python write command'
         except Exception as err:
-            print("ERROR: Provider failed to process write message with exception: %s" % str(err))
-            msg = 'ERR=Provider failed to process write message with exception: {} on line {}'.format(err,sys.exc_info()[-1].tb_lineno)
+            print(f'ERROR: Provider failed to process write message with exception: {err}')
+            msg = f'ERR=Provider failed to process write message with exception: {err} on line {sys.exc_info()[-1].tb_lineno}'
 
         return msg
 
-    def periodic_publish(self):
+    def periodic_publish(self) -> None:
         """Loop that calls `self.publish` every second."""
 
         while True:
@@ -171,10 +170,10 @@ class GenericPython(Provider):
             try:
                 self.publish(msg)
             except Exception as e:
-                print("provider periodic_publish error: {}".format(e))
+                print(f'provider periodic_publish error: {e}')
             time.sleep(1)
 
-    def _pack_data(self):
+    def _pack_data(self) -> str:
         """Pack system data into a string"""
         self._update_elements()
 
@@ -192,7 +191,7 @@ class GenericPython(Provider):
         return msg
 
    
-    def _update_elements(self):
+    def _update_elements(self) -> None:
         """Update the provider elements with the current state of the simulation"""
         with self.__lock:
             # Get current state from simulation
@@ -208,9 +207,8 @@ class GenericPython(Provider):
             # Need to check tags from simulation to ensure they are in device.field format. If not, force them to be
             self.elements['outputs_from_fd']['analog'] = sim_state['input']['analog']
             self.elements['outputs_from_fd']['binary'] = sim_state['input']['binary']
-        return
 
-    def _check_sim_tag_format(self):
+    def _check_sim_tag_format(self) -> None:
         """Check that tags in the similation state are of right form."""
         sim_state = self.simulation.get_current_state()
         # Iterate through all the tags in sim_state
@@ -220,7 +218,7 @@ class GenericPython(Provider):
                     if not (len(tag.split('.')) == 2):
                         self.valid_tag_format = False
 
-    def _convert_tags(self, sim_state):
+    def _convert_tags(self, sim_state: dict) -> dict:
         """Convert tags in the similation state to the right form."""
         # Iterate through all the tags in sim_state
         new_sim_state = copy.deepcopy(sim_state)
@@ -238,7 +236,7 @@ class GenericPython(Provider):
                 new_sim_state[io][tag_type] = new_tag_dict
         return new_sim_state
 
-    def _format_tag(self, tag, tag_type):
+    def _format_tag(self, tag: str, tag_type: str) -> str:
         """Check/modify formatting of tag to conform to 'device.field' format."""
         parts = tag.split('.')
         tag_device = parts[0]
