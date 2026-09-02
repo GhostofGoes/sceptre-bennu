@@ -120,7 +120,6 @@ void FieldDevice::processOutputs()
         mod->scanOutputs();
     }
     mDataManager->updateInternalData();
-    mDataManager->clearUpdatedTags();
 }
 
 void FieldDevice::startDevice()

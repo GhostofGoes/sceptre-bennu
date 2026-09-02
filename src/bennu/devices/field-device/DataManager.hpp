@@ -231,15 +231,32 @@ public:
         }
     }
 
+    void deleteBinaryTag(const std::string& tag)
+    {
+        {
+            std::lock_guard<std::shared_mutex> lock(mBinaryMutex);
+            mUpdatedBinaryTags.erase(tag);
+        }
+    }
+
+    void deleteAnalogTag(const std::string& tag)
+    {
+        {
+            std::lock_guard<std::shared_mutex> lock(mAnalogMutex);
+            mUpdatedAnalogTags.erase(tag);
+        }
+    }
+
     void clearUpdatedTags()
     {
         {
             std::lock_guard<std::shared_mutex> lock(mBinaryMutex);
-            mUpdatedAnalogTags.clear();
+            mUpdatedBinaryTags.clear();
+            
         }
         {
             std::lock_guard<std::shared_mutex> lock(mAnalogMutex);
-            mUpdatedBinaryTags.clear();
+            mUpdatedAnalogTags.clear();
         }
     }
 
